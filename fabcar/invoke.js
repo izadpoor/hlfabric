@@ -10,27 +10,35 @@
 
 var Fabric_Client = require('fabric-client');
 var path = require('path');
-var fs = require('fs');
 var util = require('util');
 var os = require('os');
-
+var fs = require('fs')
 //
 var fabric_client = new Fabric_Client();
-// Add Tls 
-var options = {                                                                 
-    tls_cert: {                                                                 
-		Peerpem: fs.readFileSync(path.join(__dirname, './tls') + '/tlsca.example.com-cert.pem').toString(),
-		Ordererpem: fs.readFileSync(path.join(__dirname, './tls') + '/tlsca.example.com-cert.pem').toString(),
-		'request-timeout': 100000,
-		'ssl-target-name-override': 'peer0.org1.example.com'
-
-    }                                                                           
-}; 
+let peerdata = fs.readFileSync(path.join(__dirname, 'tls/tlsca.org1.example.com-cert.pem'));
+let ordererdata = fs.readFileSync(path.join(__dirname, 'tls/tlsca.example.com-cert.pem'));
+console.log('STEP 1 load certs(PEER) ==> ' +peerdata.toString());
+console.log('STEP 1 load certs(ORDERER) ==> ' +ordererdata.toString());
+//var peer = fabric_client.newPeer('grpc://192.168.1.92:7051');
+var peer = fabric_client.newPeer(
+    'grpcs://192.168.1.92:7051',
+    {
+        pem: Buffer.from(peerdata).toString(),
+        'ssl-target-name-override': 'peer0.org1.example.com'
+    }
+);
+console.log('STEP 2 ==> new peer added');
 // setup the fabric network
 var channel = fabric_client.newChannel('mychannel');
-var peer = fabric_client.newPeer('grpcs://192.168.1.92:9051',{pem: options.tls_cert.Peerpem});
 channel.addPeer(peer);
-var order = fabric_client.newOrderer('grpcs://192.168.1.92:7050',{pem: options.tls_cert.Ordererpem});
+
+var order = fabric_client.newOrderer('grpcs://192.168.1.92:7050',
+    {
+        pem: Buffer.from(ordererdata).toString(),
+        'ssl-target-name-override': 'orderer.example.com'
+    }
+);
+console.log('STEP 3 ==> new orderer created ');
 channel.addOrderer(order);
 
 //
@@ -52,13 +60,13 @@ Fabric_Client.newDefaultKeyValueStore({ path: store_path
 	fabric_client.setCryptoSuite(crypto_suite);
 
 	// get the enrolled user from persistence, this user will sign all requests
-	return fabric_client.getUserContext('user4', true);
+	return fabric_client.getUserContext('user3', true);
 }).then((user_from_store) => {
 	if (user_from_store && user_from_store.isEnrolled()) {
-		console.log('Successfully loaded user4 from persistence');
+		console.log('Successfully loaded user3 from persistence');
 		member_user = user_from_store;
 	} else {
-		throw new Error('Failed to get user4.... run registerUser.js');
+		throw new Error('Failed to get user3.... run registerUser.js');
 	}
 
 	// get a transaction id object based on the current user assigned to fabric client
@@ -72,7 +80,7 @@ Fabric_Client.newDefaultKeyValueStore({ path: store_path
 		//targets: let default to the peer assigned to the client
 		chaincodeId: 'marblesp',
 		fcn: 'initMarble',
-		args: ['marble2','blue2','77','tom','99'],
+		args: ['marble666','RED','100','plato','200'],
 		chainId: 'mychannel',
 		txId: tx_id
 	};
@@ -88,7 +96,7 @@ Fabric_Client.newDefaultKeyValueStore({ path: store_path
 			isProposalGood = true;
 			console.log('Transaction proposal was good');
 		} else {
-			console.error('Transaction proposal was bad');
+			console.error('Transaction proposal was bad' + proposalResponses[0].response);
 		}
 	if (isProposalGood) {
 		console.log(util.format(
@@ -113,7 +121,12 @@ Fabric_Client.newDefaultKeyValueStore({ path: store_path
 		// get an eventhub once the fabric client has a user assigned. The user
 		// is required bacause the event registration must be signed
 		let event_hub = fabric_client.newEventHub();
-		event_hub.setPeerAddr('grpcs://192.168.1.92:9053',{pem: options.tls_cert.Peerpem});
+		event_hub.setPeerAddr('grpc://192.168.1.92:7053',
+		{
+			pem: Buffer.from(peerdata).toString(),
+			'ssl-target-name-override': 'peer0.org1.example.com'
+		}	
+	);
 
 		// using resolve the promise so that result status may be processed
 		// under the then clause rather than having the catch clause process
@@ -158,7 +171,7 @@ Fabric_Client.newDefaultKeyValueStore({ path: store_path
 	if (results && results[0] && results[0].status === 'SUCCESS') {
 		console.log('Successfully sent transaction to the orderer.');
 	} else {
-		console.error('Failed to order the transaction. Error code: ' + response.status);
+		console.error('Failed to order the transaction. Error code: ' + results[0].status);
 	}
 
 	if(results && results[1] && results[1].event_status === 'VALID') {

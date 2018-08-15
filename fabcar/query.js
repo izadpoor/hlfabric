@@ -13,41 +13,24 @@ var path = require('path');
 var util = require('util');
 var os = require('os');
 var fs = require('fs');
-
 //
 var fabric_client = new Fabric_Client();
+//
+let peerdata = fs.readFileSync(path.join(__dirname, 'tls/tlsca.org1.example.com-cert.pem'));
+let ordererdata = fs.readFileSync(path.join(__dirname, 'tls/tlsca.example.com-cert.pem'));
 
-// var options = {                                                                 
-//     tls_cert: {                                                                 
-// 		pem: fs.readFileSync(path.join(__dirname, './tls') + '/tlsca.org1.example.com-cert.pem').toString(),
-// 		//Ordererpem: fs.readFileSync(path.join(__dirname, './tls') + '/tlsca.example.com-cert.pem').toString(),
-// 		clientKey: fs.readFileSync(path.join(__dirname, './tls') + '/client.crt').toString(),
-// 		clientCert: fs.readFileSync(path.join(__dirname, './tls') + '/client.key').toString(),
-// 		clientCa: fs.readFileSync(path.join(__dirname, './tls') + '/ca.crt').toString()
-//     }                                                                           
-// };
-var options = {                                                                 
-    tls_cert: {                                                                 
-		pem: fs.readFileSync(path.join(__dirname, './tls') + '/tlsca.example.com-cert.pem').toString(),
-		Ordererpem: fs.readFileSync(path.join(__dirname, './tls') + '/tlsca.example.com-cert.pem').toString(),
-		'request-timeout': 100000,
-		'ssl-target-name-override': 'peer0.org1.example.com',
-		clientCert: fs.readFileSync(path.join(__dirname, './tls') + '/ca.crt').toString(),
-		clientKey: fs.readFileSync(path.join(__dirname, './tls') + '/server.key').toString(),
-    }                                                                           
-}; 
-// setup the fabric network
+console.log(peerdata.toString());
+var peer = fabric_client.newPeer(
+    'grpcs://192.168.1.92:7051',
+    {
+        pem: Buffer.from(peerdata).toString(),
+        'ssl-target-name-override': 'peer0.org1.example.com'
+    }
+);
 var channel = fabric_client.newChannel('mychannel');
-var peer = fabric_client.newPeer('grpcs://192.168.1.92:7051',{
-	"pem": options.tls_cert.pem,
-	"ssl-target-name-override" : "peer0.Org1.example.com",
-	"request-timeout" :10000,
-	  clientKey: options.tls_cert.clientKey,
-      clientCert: options.tls_cert.clientCert
 
-});
-// channel.clientCert = options.tls_cert.clientCert;
-// channel.clientKey = options.tls_cert.clientkey;
+let channel_event_hub = channel.newChannelEventHub(peer);
+// setup the fabric network
 channel.addPeer(peer);
 
 //
@@ -69,23 +52,28 @@ Fabric_Client.newDefaultKeyValueStore({ path: store_path
 	fabric_client.setCryptoSuite(crypto_suite);
 
 	// get the enrolled user from persistence, this user will sign all requests
-	return fabric_client.getUserContext('User1', true);
+	return fabric_client.getUserContext('user3', true);
 }).then((user_from_store) => {
 	if (user_from_store && user_from_store.isEnrolled()) {
-		console.log('Successfully loaded User1 from persistence');
+		console.log('Successfully loaded user3 from persistence');
 		member_user = user_from_store;
 	} else {
-		throw new Error('Failed to get User1.... run registerUser.js');
+		throw new Error('Failed to get user3.... run registerUser.js');
 	}
 
 	// queryCar chaincode function - requires 1 argument, ex: args: ['CAR4'],
 	// queryAllCars chaincode function - requires no arguments , ex: args: [''],
+	// const request = {
+	// 	//targets : --- letting this default to the peers assigned to the channel
+	// 	chaincodeId: 'mycc',
+	// 	fcn: 'query',
+	// 	args: ['b']
+	// };
 	const request = {
 		//targets : --- letting this default to the peers assigned to the channel
 		chaincodeId: 'marblesp',
-		fcn: 'query',
-		args: ['readMarble','marble1']
-		
+		fcn: 'readMarblePrivateDetails',
+		args: ['marble666']
 	};
 
 	// send the query proposal to the peer

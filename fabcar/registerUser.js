@@ -30,7 +30,7 @@ Fabric_Client.newDefaultKeyValueStore({ path: store_path
     fabric_client.setStateStore(state_store);
     var crypto_suite = Fabric_Client.newCryptoSuite();
     // use the same location for the state store (where the users' certificate are kept)
-    // and the crypto stonpm rebuildre (where the users' keys are kept)
+    // and the crypto store (where the users' keys are kept)
     var crypto_store = Fabric_Client.newCryptoKeyStore({path: store_path});
     crypto_suite.setCryptoKeyStore(crypto_store);
     fabric_client.setCryptoSuite(crypto_suite);
@@ -39,7 +39,7 @@ Fabric_Client.newDefaultKeyValueStore({ path: store_path
     	verify: false
     };
     // be sure to change the http to https when the CA is running TLS enabled
-    fabric_ca_client = new Fabric_CA_Client('https://192.168.1.92:7054', tlsOptions , 'ca-org1', crypto_suite);
+    fabric_ca_client = new Fabric_CA_Client('https://192.168.1.92:7054', null , 'ca-org1', crypto_suite);
 
     // first check to see if the admin is already enrolled
     return fabric_client.getUserContext('admin', true);
@@ -53,16 +53,16 @@ Fabric_Client.newDefaultKeyValueStore({ path: store_path
 
     // at this point we should have the admin user
     // first need to register the user with the CA server
-    return fabric_ca_client.register({enrollmentID: 'User1', affiliation: 'org1.department1',role: 'client'}, admin_user);
+    return fabric_ca_client.register({enrollmentID: 'user3', affiliation: 'org1.department1',role: 'client'}, admin_user);
 }).then((secret) => {
     // next we need to enroll the user with CA server
-    console.log('Successfully registered User1 - secret:'+ secret);
+    console.log('Successfully registered user3 - secret:'+ secret);
 
-    return fabric_ca_client.enroll({enrollmentID: 'User1', enrollmentSecret: secret});
+    return fabric_ca_client.enroll({enrollmentID: 'user3', enrollmentSecret: secret});
 }).then((enrollment) => {
-  console.log('Successfully enrolled member user "User1" ');
+  console.log('Successfully enrolled member user "user3" ');
   return fabric_client.createUser(
-     {username: 'User1',
+     {username: 'user3',
      mspid: 'Org1MSP',
      cryptoContent: { privateKeyPEM: enrollment.key.toBytes(), signedCertPEM: enrollment.certificate }
      });
@@ -71,7 +71,7 @@ Fabric_Client.newDefaultKeyValueStore({ path: store_path
 
      return fabric_client.setUserContext(member_user);
 }).then(()=>{
-     console.log('User1 was successfully registered and enrolled and is ready to intreact with the fabric network');
+     console.log('user3 was successfully registered and enrolled and is ready to interact with the fabric network');
 
 }).catch((err) => {
     console.error('Failed to register: ' + err);
